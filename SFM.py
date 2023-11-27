@@ -66,9 +66,13 @@ def sfm_1step(f_pic_idx ,co_pic_idx, s_pic_idx ,list_kp_1s,list_kp_2s,matchidxs,
 
 
 
-    ok, rotation_vector, translation_vector= cv2.solvePnP(np.float32(co_3dpoints), np.float32(second_pic_feature_xy),
-                                                           camK, np.zeros((4, 1)),flags=0)
-    # ok, rotation_vector, translation_vector, _ = cv2.solvePnPRansac(np.float32(co_3dpoints),np.float32(second_pic_feature_xy), camK,np.zeros((4, 1)))#此处输出的是第三张图片的相机位姿
+    # ok, rotation_vector, translation_vector= cv2.solvePnP(np.float32(co_3dpoints), np.float32(second_pic_feature_xy),
+    #                                                        camK, np.zeros((4, 1)),flags=0)
+    pnp_co_3dpoints = np.array([co_3dpoints], dtype=np.float32)
+    pnp_second_pic_feature_xy = np.array([second_pic_feature_xy], dtype=np.float32)
+    ok, rotation_vector, translation_vector= cv2.solvePnP(pnp_co_3dpoints,pnp_second_pic_feature_xy,
+                                                           camK, np.zeros((4, 1)),flags=cv2.SOLVEPNP_EPNP)
+
     rotM = cv2.Rodrigues(rotation_vector)[0]
     transform_matrix02 = np.identity(4)  # 组合变换矩阵02
     transform_matrix02[0:3, 0:3] = rotM
@@ -226,6 +230,10 @@ def main(imgpaths,camK,imgnum):
     pcd23.paint_uniform_color([0, 1, 0])
 
     pcd01=pcd01+pcd12+pcd23
+    MinPts = 5  # 邻域球内的最少点个数，小于该个数为噪声点
+    R = 1
+    pcd01, idx = pcd01.remove_radius_outlier(MinPts, R)
+
     o3d.visualization.draw_geometries([pcd01])
 
 
