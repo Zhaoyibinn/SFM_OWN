@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -123,21 +125,46 @@ def surf(imgpaths,imgnum):
     matchidxs = []#特征匹配idx数组，N*N个格子，每个格子里面存着所有特征点对所对应的图片特征点idx
     list_kp_1s=[]#特征匹配数组中第一张图片的特征点像素坐标，N*N个格子（N为图片数量），每个格子里面存着许多对特征点;
     list_kp_2s=[]#特征匹配数组中第二张图片的特征点像素坐标
+    # start = time.time()
+    # for i in range(imgnum):
+    #     n = 0
+    #     matchidx = []
+    #     list_kp_1 = []
+    #     list_kp_2 = []
+    #     while n < imgnum:
+    #         one_list_kp_1, one_list_kp_2, one_matchidx = get_coordinates_from_matches(goodmatches[i][n], key_querys[i], key_querys[n])
+    #         matchidx.append(one_matchidx)
+    #         list_kp_1.append(one_list_kp_1)
+    #         list_kp_2.append(one_list_kp_2)
+    #         n=n+1
+    #     matchidxs.append(matchidx)
+    #     list_kp_1s.append(list_kp_1)
+    #     list_kp_2s.append(list_kp_2)
+    # end= time.time()
+    # print(f"第一种：{end - start}")
+
+    start = time.time()
     for i in range(imgnum):
         n = 0
         matchidx = []
         list_kp_1 = []
         list_kp_2 = []
         while n < imgnum:
-            one_list_kp_1, one_list_kp_2, one_matchidx = get_coordinates_from_matches(goodmatches[i][n], key_querys[i], key_querys[n])
-            matchidx.append(one_matchidx)
-            list_kp_1.append(one_list_kp_1)
-            list_kp_2.append(one_list_kp_2)
+            if n <= i:
+                matchidx.append(0)
+                list_kp_1.append(0)
+                list_kp_2.append(0)
+            else:
+                one_list_kp_1, one_list_kp_2, one_matchidx = get_coordinates_from_matches(goodmatches[i][n], key_querys[i], key_querys[n])
+                matchidx.append(one_matchidx)
+                list_kp_1.append(one_list_kp_1)
+                list_kp_2.append(one_list_kp_2)
             n=n+1
         matchidxs.append(matchidx)
         list_kp_1s.append(list_kp_1)
         list_kp_2s.append(list_kp_2)
-
+    end = time.time()
+    print(f"第二种：{end - start}")
 
 
     # imgidx1 = 0#特征匹配可视化，需要手动更改序号
