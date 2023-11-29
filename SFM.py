@@ -5,6 +5,7 @@ import cv2
 import matplotlib.pyplot as plt
 import open3d as o3d
 import networkx as nx
+import Bundle_adjustment as BA
 
 def create_co_see_pic(list_kp_1s,list_kp_2s,matchidxs,imgnum):
     '''
@@ -81,10 +82,10 @@ def sfm_1step(f_pic_idx ,co_pic_idx, s_pic_idx ,list_kp_1s,list_kp_2s,matchidxs,
 
     #三张图片共视点可视化
     #这里二维可视化和三维可视化好像会冲突，建议只看一个，两个都要看就只能看一次，再次进这个函数就会报错（不知道为什么）
-    img1 = cv2.imread(imgpaths[f_pic_idx])#二维可视化
-    img2 = cv2.imread(imgpaths[co_pic_idx])
-    img3 = cv2.imread(imgpaths[s_pic_idx])
-    look_3_co_pic(img1,img2,img3,first_pic_feature_xy,second_pic_feature_xy,co_pic_feature_xy,co_feature_idx_idx.__len__())
+    # img1 = cv2.imread(imgpaths[f_pic_idx])#二维可视化
+    # img2 = cv2.imread(imgpaths[co_pic_idx])
+    # img3 = cv2.imread(imgpaths[s_pic_idx])
+    # look_3_co_pic(img1,img2,img3,first_pic_feature_xy,second_pic_feature_xy,co_pic_feature_xy,co_feature_idx_idx.__len__())
     #
     # pcd = o3d.geometry.PointCloud()#三维可视化
     # pcd.points = o3d.utility.Vector3dVector(co_3dpoints)
@@ -147,58 +148,6 @@ def look_3_co_pic(img1,img2,img3,first_pic_feature_xy,second_pic_feature_xy,co_p
     return 0
 
 
-
-def pixel2cam(p,camK):
-    campoint = [(p[0]-camK[0,2])/camK[0,0],(p[1]-camK[1,2])/camK[1,1]]
-    return campoint
-
-
-def calerror(camK,list_kp1, list_kp2,points3d,R,t):
-    '''
-    用于计算三角化的重投影误差，参考高翔视觉里程计1，此处暂时不用，保留
-    :param camK: 内参矩阵
-    :param list_kp1: 第一张图的像素坐标
-    :param list_kp2: 第二张图的像素坐标
-    :param points3d: 三维坐标
-    :param R:
-    :param t:
-    :return: None
-    '''
-    K=camK
-    i=0
-    while i < list_kp1.size/2:
-    #
-        print("正在计算点",end="")
-        print(i)
-        pt1_cam = pixel2cam(list_kp1[i],camK);
-        pt1_cam_3d = [points3d[i][0] / points3d[i][2],points3d[i][1] / points3d[i][2] ]
-        print( "point in the first camera frame: ",end="")
-        print( pt1_cam )
-        print("point projected from 3D ", end="")
-        print(pt1_cam_3d)
-        print(" ")
-    #
-    # // 第二个图
-        pt2_cam = pixel2cam(list_kp2[i], camK);
-        pt2_trans = np.dot(R,points3d[i].T)+t.T[0]
-        pt2_trans=pt2_trans/pt2_trans[2]
-        print("point in the second camera frame: ", end="")
-        print(pt2_cam)
-        print("point projected from 3D ", end="")
-        print(pt2_trans)
-        print(" ")
-        print(" ")
-        print("误差=", end="")
-        i=i+1
-    # Mat
-    # pt2_trans = R * (Mat_ < double > (3, 1) << points[i].x, points[i].y, points[i].z) + t;
-    # pt2_trans /= pt2_trans.at < double > (2, 0);
-    # cout << "point in the second camera frame: " << pt2_cam << endl;
-    # cout << "point reprojected from second frame: " << pt2_trans.t() << endl;
-    # cout << endl;
-    # }
-    return 0
-
 def triangulate(R, t ,points1,points2):
     '''
     三角化
@@ -260,18 +209,20 @@ def first_proc_2pic(imgpaths,camK,imgnum,picidx1,picidx2):
     #  [ 0.20040998 ,-0.00729785  ,0.97968459]]
     points3d = triangulate(R, t, list_kp1, list_kp2)
 
-    # calerror(camK, list_kp1, list_kp2, points3d, R, t) #计算重投影误差
+    # Bundle_adjustment.calerror(camK, list_kp1, list_kp2, points3d, R, t) #计算重投影误差
 
     return R,t,list_kp1, list_kp2,points3d,matchidxs
 
 def main(imgpaths,camK,imgnum):
     R01,t01,list_kp1_01, list_kp2_01,points3d01,matchidxs= first_proc_2pic(imgpaths,camK,imgnum,0,1)
+    BA.calerror(camK,list_kp1_01,list_kp2_01,points3d01,np.identity(3),np.zeros([3,1]),R01,t01)
     list_kp_1s, list_kp_2s, imgcolors, matchidxs = SURF.surf(imgpaths, imgnum)
     create_co_see_pic(list_kp_1s, list_kp_2s, matchidxs,imgnum)
     #此处暂时进行了四张图片，三张点云的构建
     points3d12 , t02 , R02 = sfm_1step(0,1,2,list_kp_1s,list_kp_2s,matchidxs,R01,t01,points3d01)
-    points3d23, t03, R03 = sfm_1step(1, 2, 3, list_kp_1s, list_kp_2s, matchidxs, R02, t02, points3d12)
 
+    points3d23, t03, R03 = sfm_1step(1, 2, 3, list_kp_1s, list_kp_2s, matchidxs, R02, t02, points3d12)
+    BA.calerror(camK, list_kp_1s[2][3], list_kp_2s[2][3], points3d23, R02,t02,R03, t03)
 
 
     pcd01 = o3d.geometry.PointCloud()
