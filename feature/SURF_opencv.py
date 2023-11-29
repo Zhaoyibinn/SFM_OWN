@@ -2,16 +2,17 @@ import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-class SURF_cv2:
-    def __init__(self, imgpaths:list, imgnum:int):
-        '''
-                基于opencv实现的SURF特征点提取、描述、匹配
-                :param imgpaths: 全部图片路径数组
-                :param imgnum: 图片数量
-        '''
-        self.imgpaths_ = imgpaths
-        self.imgnum_ = imgnum
+from feature import my_feature_class
+class SURF_cv2(my_feature_class.feature):
+    '''
+        基于opencv实现的SURF特征点提取、描述、匹配
+        :param imgpaths: 全部图片路径数组
+        :param imgnum: 图片数量
+    '''
 
+    def __init__(self, imgpaths:list, imgnum:int):
+        # 调用父类的初始化方法
+        super().__init__(imgpaths, imgnum)
     def surf_feature_extraction(self):
         '''
         :return:list_kp_1s：特征匹配数组中第一张图片的特征点像素坐标，N*N个格子（N为图片数量），每个格子里面存着许多对特征点;
@@ -19,11 +20,6 @@ class SURF_cv2:
                 imgcolors：彩色图片;
                 matchidxs：特征匹配idx数组，N*N个格子，每个格子里面存着所有特征点对所对应的图片特征点idx
         '''
-        # ------------ 读取图片 ------------
-        # imgcolors = []  # 彩色图
-        # for i in range(self.imgnum_):
-        #     imgcolors.append(cv2.imread(self.imgpaths_[i]))
-
         imgs = []  # 灰度图
         for i in range(self.imgnum_):
             imgs.append(cv2.imread(self.imgpaths_[i], 0))

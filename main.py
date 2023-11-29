@@ -5,6 +5,13 @@ import open3d as o3d
 from my_math import rotation_opencv
 def main(imgpaths,camK,imgnum):
     SURF_extraction = SURF_opencv.SURF_cv2(imgpaths, imgnum)
+
+
+
+
+
+
+
     list_kp_1s, list_kp_2s, matchidxs = SURF_extraction.surf_feature_extraction()
     # 处理0号，1号两张图片
     list_kp0, list_kp1, _ = SURF_extraction.get_feature(0, 1)

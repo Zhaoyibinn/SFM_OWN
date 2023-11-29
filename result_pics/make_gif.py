@@ -2,13 +2,13 @@ import os
 import imageio
 
 # 1. 指定文件夹和文件名模板
-folder_path = f'test0123'  # 替换为实际的文件夹路径
+folder_path = f'../test0123'  # 替换为实际的文件夹路径
 output_gif_filename = folder_path+'.gif'
 output_mp4_filename = folder_path+'.mp4'
 
 # 2. 获取文件夹中的所有PNG图像文件
 image_files = [f for f in os.listdir(folder_path) if f.endswith('.png')]
-
+image_files.sort()
 frames = []
 for image_file in image_files:
     image_path = os.path.join(folder_path, image_file)

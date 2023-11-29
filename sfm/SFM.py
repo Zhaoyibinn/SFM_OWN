@@ -8,6 +8,78 @@ import open3d as o3d
 import networkx as nx
 from estimator import triangulation, PNP_opencv
 from my_math import rotation_opencv
+from feature import SURF_opencv
+from feature import my_feature_class
+class sfm_cv2:
+    def __init__(self, feature_extractor:my_feature_class.feature):
+        pass
+    def __proc_2_pics(self, camK, list_kp1, list_kp2):
+        '''
+        任意两张图片处理，用对极几何求解R，t，并三角化计算得到三维点作为初始点云
+        :param
+        :param camK: 相机内参
+        :param list_kp1: 需要处理的图片1的特征点的像素坐标
+        :param list_kp2: 需要处理的图片2的特征点的像素坐标
+        :return:    R：旋转矩阵；
+                    t：平移向量；
+                    points3d：三维坐标点 numpy 矩阵（K*3）；
+        '''
+        good_F, status = cv2.findFundamentalMat(list_kp1, list_kp2, method=cv2.FM_RANSAC, ransacReprojThreshold=3,
+                                                confidence=0.99)  # 使用RANSAC方法计算基本矩阵，函数参考
+        # https://blog.csdn.net/bb_sy_w/article/details/121082013?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170108654916800215081297%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=170108654916800215081297&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~baidu_landing_v2~default-5-121082013-null-null.142^v96^pc_search_result_base2&utm_term=cv2.findFundamentalMat&spm=1018.2226.3001.4187
+        print("该两张图片的基础矩阵F=", end="")
+        print(good_F)
+        E = np.dot(np.dot(np.transpose(camK), good_F), camK)  # 计算本质矩阵，就是(K.T)*F*K
+        print("该两张图片的本质矩阵E=", end="")
+        print(E)
+        retval, R, t, mask = cv2.recoverPose(E, list_kp1, list_kp2, camK)  # 计算得到R，t
+        print("计算得到前两张图片的R=", end="")
+        print(R)
+        print("计算得到前两张图片的t=", end="")
+        print(t)
+        points3d = triangulation.triangulate(camK, R, t, list_kp1, list_kp2)
+        # calerror(camK, list_kp1, list_kp2, points3d, R, t) #计算重投影误差
+        return R, t, points3d
+
+    def __increment_sfm(self, co_points3d01, co_feature_extra_pic_xy, camK, R01, t01, list_kp1_12, list_kp2_12):
+        '''
+        对于新加入的图片进行增量式重建
+        :param co_points3d01: 图片0和图片1构建出的点云中对应的2维特征和图片2共视的部分 numpy(Y*3)
+        :param co_feature_extra_pic_xy: 图片2中共视的2维特征点的坐标
+        :param camK: 相机内参
+        :param R01: 图片0到图片1的旋转矩阵
+        :param t01: 图片0到图片1的平移向量
+        :param list_kp1_12: 图片1和图片2进行特征匹配得到的图片1中的特征点的像素坐标
+        :param list_kp2_12:图片1和图片2进行特征匹配得到的图片2中的特征点的像素坐标
+        :return: points3d_12_cam0：在cam0的坐标系下的增量点云 X*3
+                 R02：cam0到cam2的旋转矩阵，numpy 3*3
+                 t02：cam0到cam2的平移向量，numpy 3*1
+        '''
+        # 图片0到图片1的位姿
+        transform_matrix01 = rotation_opencv.Rt2SE3(R01, t01)
+
+        # 图片0到图片2（增量图片）的位姿
+        # 通过PNP算法，基于共视点恢复出增量图片的相机姿态
+        ok, rotation_vector02, translation_vector02 = PNP_opencv.EPNP(co_points3d01, co_feature_extra_pic_xy, camK)
+        rot_mat02 = rotation_opencv.rotation_vector2matrix(rotation_vector02)
+        transform_matrix02 = rotation_opencv.Rt2SE3(rot_mat02, translation_vector02)
+
+        # 计算图片1到图片2（增量图片）之间的位姿
+        transform_matrix12 = transform_matrix02 @ np.linalg.inv(transform_matrix01)
+
+        # 使用图片1和图片2进行三角化得到增量点云
+        R12, t12 = rotation_opencv.SE32Rt(transform_matrix12)
+        # 得到的点云以图片1的相机姿态为原点坐标系
+        points3d_12_cam1 = triangulation.triangulate(camK, R12, t12, list_kp1_12, list_kp2_12)
+
+        # 计算图片1到图片0的位姿
+        transform_matrix10 = np.linalg.inv(transform_matrix01)
+        R10, t10 = rotation_opencv.SE32Rt(transform_matrix10)
+        # 将增量点云统一到第0张图片的基准坐标系
+        points3d_12_cam0 = (R10 @ points3d_12_cam1.T + t10).T
+        R02, t02 = rotation_opencv.SE32Rt(transform_matrix02)
+        return points3d_12_cam0, R02, t02
+
 def create_co_see_pic(list_kp_1s,list_kp_2s,matchidxs,imgnum):
     '''
     创建共视图，即通过匹配的特征点数量确定哪些图片是两两接近的（暂时还没用到，可以可视化）
@@ -101,12 +173,12 @@ def proc_2_pics(camK, list_kp1, list_kp2):
                 points3d：三维坐标点 numpy 矩阵（K*3）；
     '''
     good_F, status = cv2.findFundamentalMat(list_kp1, list_kp2, method=cv2.FM_RANSAC, ransacReprojThreshold=3,
-                                            confidence=0.99)#使用RANSAC方法计算基本矩阵，函数参考
-                                                            #https://blog.csdn.net/bb_sy_w/article/details/121082013?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170108654916800215081297%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=170108654916800215081297&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~baidu_landing_v2~default-5-121082013-null-null.142^v96^pc_search_result_base2&utm_term=cv2.findFundamentalMat&spm=1018.2226.3001.4187
-    print("前两张图片的基础矩阵F=", end="")
+                                            confidence=0.99)  # 使用RANSAC方法计算基本矩阵，函数参考
+    # https://blog.csdn.net/bb_sy_w/article/details/121082013?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170108654916800215081297%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=170108654916800215081297&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~baidu_landing_v2~default-5-121082013-null-null.142^v96^pc_search_result_base2&utm_term=cv2.findFundamentalMat&spm=1018.2226.3001.4187
+    print("该两张图片的基础矩阵F=", end="")
     print(good_F)
-    E = np.dot(np.dot(np.transpose(camK), good_F), camK)#计算本质矩阵，就是(K.T)*F*K
-    print("前两张图片的本质矩阵E=", end="")
+    E = np.dot(np.dot(np.transpose(camK), good_F), camK)  # 计算本质矩阵，就是(K.T)*F*K
+    print("该两张图片的本质矩阵E=", end="")
     print(E)
     retval, R, t, mask = cv2.recoverPose(E, list_kp1, list_kp2, camK)  # 计算得到R，t
     print("计算得到前两张图片的R=", end="")
@@ -114,7 +186,6 @@ def proc_2_pics(camK, list_kp1, list_kp2):
     print("计算得到前两张图片的t=", end="")
     print(t)
     points3d = triangulation.triangulate(camK, R, t, list_kp1, list_kp2)
-
     # calerror(camK, list_kp1, list_kp2, points3d, R, t) #计算重投影误差
     return R, t, points3d
 
@@ -156,3 +227,4 @@ def increment_sfm(co_points3d01, co_feature_extra_pic_xy, camK, R01, t01, list_k
     points3d_12_cam0 = (R10 @ points3d_12_cam1.T + t10).T
     R02, t02 = rotation_opencv.SE32Rt(transform_matrix02)
     return points3d_12_cam0, R02, t02
+
