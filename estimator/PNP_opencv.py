@@ -12,4 +12,7 @@ def EPNP(co_3dpoints, extra_pic_feature_xy, camK):
              translation_vector: 平移向量 numpy矩阵
     '''
     ok, rotation_vector, translation_vector, _ = cv2.solvePnPRansac(co_3dpoints.astype(np.float32), extra_pic_feature_xy.astype(np.float32), camK, np.zeros((4, 1)), flags=cv2.SOLVEPNP_EPNP)
+    # ok, rotation_vector, translation_vector, _ = cv2.solvePnP(co_3dpoints.astype(np.float32),
+    #                                                                 extra_pic_feature_xy.astype(np.float32), camK,
+    #                                                                 np.zeros((4, 1)), flags=cv2.SOLVEPNP_EPNP)
     return ok, rotation_vector, translation_vector

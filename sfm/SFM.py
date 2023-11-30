@@ -7,11 +7,59 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 import networkx as nx
 from estimator import triangulation, PNP_opencv
-from my_math import rotation_opencv
+from my_math import my_rotation
 from feature import SURF_opencv
 from feature import my_feature_class
 class sfm_cv2:
-    def __init__(self, feature_extractor:my_feature_class.feature):
+    def __init__(self, feature_extractor:my_feature_class.feature, camK):
+        self.feature_extractor_ = feature_extractor
+        self.camK_ = camK
+    def reconstruct_allpics(self):
+        img_idx_list = range(self.feature_extractor_.imgnum_)
+        list_kp0, list_kp1, _ = self.feature_extractor_.get_feature(0, 1)
+        R01, t01, points3d_01 = self.__proc_2_pics(self.camK_, list_kp0, list_kp1)
+        g_base_to_Mid = my_rotation.Rt2SE3(R01, t01)
+        points3d_old_iter = points3d_01
+        points3d_camBase_list = []
+        points3d_camBase_list.append(points3d_old_iter)
+        for i in range(self.feature_extractor_.imgnum_ - 2):
+            sub_idx_list = img_idx_list[i:i + 3]
+            # 顺序取出三张图片的索引，进行增量重建
+            points3d_old_iter, g_base_to_Mid= self.__reconstruct_3pics(sub_idx_list[0], sub_idx_list[1], sub_idx_list[2], g_base_to_Mid, points3d_old_iter)
+            points3d_camBase_list.append(points3d_old_iter)
+        pcd_all_np = np.vstack(points3d_camBase_list)
+        # pcd_all_np = points3d_camBase_list
+        return pcd_all_np
+
+    def __reconstruct_3pics(self, idx_pic1:int, idx_pic2:int, idx_pic3:int, g_Base_to_Mid, points3d_12_camBase):
+        '''
+        给定3个图片序号（升序排列），
+        返回以图片1的相机位姿为基准坐标系下，
+        图片1和2重建得到的点云，
+        图片2和3重建得到的点云，
+        图片1的相机位姿到图片2的相机位姿的姿态变换
+        图片1的相机位姿到图片3的相机位姿的姿态变换
+        :param idx_pic1: 图片1的序号
+        :param idx_pic2: 图片2的序号
+        :param idx_pic3: 图片3的序号
+        :return:
+                 points3d_12_cam0：图片2和图片3恢复得到的增量点云 numpy X*3
+                 g_Base_to_End: base相机位姿到图片3的相机位姿的姿态变换 numpy 4*4
+        '''
+        if idx_pic1 < idx_pic2 and idx_pic2 < idx_pic3:
+            # 增加2号图片，提取其与0号，1号图片的共视特征
+            co_feature_idx, co_feature01_pic0_xy, co_feature01_pic1_xy, co_feature12_pic2_xy = self.feature_extractor_.get_co_feature(idx_pic1, idx_pic2, idx_pic3)
+            # 从0号，1号图片重建得到的点云中，按索引挑选出共视特征点的点云
+            co_points3d_01_cam0 = points3d_12_camBase[co_feature_idx, :]
+            # 增量式构建2号图片与1号图片进行三角化的点云
+            R_Base_to_Mid, t_Base_to_Mid = my_rotation.SE32Rt(g_Base_to_Mid)
+            list_kp1, list_kp2, _ = self.feature_extractor_.get_feature(idx_pic2, idx_pic3)
+            points3d_12_cam0, R02, t02 , g10= self.__increment_sfm(co_points3d_01_cam0, co_feature12_pic2_xy, self.camK_, R_Base_to_Mid, t_Base_to_Mid, list_kp1, list_kp2)
+            g_Base_to_End = my_rotation.Rt2SE3(R02, t02)
+            return points3d_12_cam0, g_Base_to_End
+        else:
+            raise ValueError("输入必须增序排列")
+        
         pass
     def __proc_2_pics(self, camK, list_kp1, list_kp2):
         '''
@@ -56,29 +104,29 @@ class sfm_cv2:
                  t02：cam0到cam2的平移向量，numpy 3*1
         '''
         # 图片0到图片1的位姿
-        transform_matrix01 = rotation_opencv.Rt2SE3(R01, t01)
+        transform_matrix01 = my_rotation.Rt2SE3(R01, t01)
 
         # 图片0到图片2（增量图片）的位姿
         # 通过PNP算法，基于共视点恢复出增量图片的相机姿态
         ok, rotation_vector02, translation_vector02 = PNP_opencv.EPNP(co_points3d01, co_feature_extra_pic_xy, camK)
-        rot_mat02 = rotation_opencv.rotation_vector2matrix(rotation_vector02)
-        transform_matrix02 = rotation_opencv.Rt2SE3(rot_mat02, translation_vector02)
+        rot_mat02 = my_rotation.rotation_vector2matrix(rotation_vector02)
+        transform_matrix02 = my_rotation.Rt2SE3(rot_mat02, translation_vector02)
 
         # 计算图片1到图片2（增量图片）之间的位姿
         transform_matrix12 = transform_matrix02 @ np.linalg.inv(transform_matrix01)
 
         # 使用图片1和图片2进行三角化得到增量点云
-        R12, t12 = rotation_opencv.SE32Rt(transform_matrix12)
+        R12, t12 = my_rotation.SE32Rt(transform_matrix12)
         # 得到的点云以图片1的相机姿态为原点坐标系
         points3d_12_cam1 = triangulation.triangulate(camK, R12, t12, list_kp1_12, list_kp2_12)
 
         # 计算图片1到图片0的位姿
         transform_matrix10 = np.linalg.inv(transform_matrix01)
-        R10, t10 = rotation_opencv.SE32Rt(transform_matrix10)
+        R10, t10 = my_rotation.SE32Rt(transform_matrix10)
         # 将增量点云统一到第0张图片的基准坐标系
         points3d_12_cam0 = (R10 @ points3d_12_cam1.T + t10).T
-        R02, t02 = rotation_opencv.SE32Rt(transform_matrix02)
-        return points3d_12_cam0, R02, t02
+        R02, t02 = my_rotation.SE32Rt(transform_matrix02)
+        return points3d_12_cam0, R02, t02, transform_matrix10
 
 def create_co_see_pic(list_kp_1s,list_kp_2s,matchidxs,imgnum):
     '''
@@ -204,27 +252,27 @@ def increment_sfm(co_points3d01, co_feature_extra_pic_xy, camK, R01, t01, list_k
              t02：cam0到cam2的平移向量，numpy 3*1
     '''
     # 图片0到图片1的位姿
-    transform_matrix01 = rotation_opencv.Rt2SE3(R01, t01)
+    transform_matrix01 = my_rotation.Rt2SE3(R01, t01)
 
     # 图片0到图片2（增量图片）的位姿
     # 通过PNP算法，基于共视点恢复出增量图片的相机姿态
     ok, rotation_vector02, translation_vector02 = PNP_opencv.EPNP(co_points3d01, co_feature_extra_pic_xy, camK)
-    rot_mat02 = rotation_opencv.rotation_vector2matrix(rotation_vector02)
-    transform_matrix02 = rotation_opencv.Rt2SE3(rot_mat02, translation_vector02)
+    rot_mat02 = my_rotation.rotation_vector2matrix(rotation_vector02)
+    transform_matrix02 = my_rotation.Rt2SE3(rot_mat02, translation_vector02)
 
     # 计算图片1到图片2（增量图片）之间的位姿
     transform_matrix12 = transform_matrix02 @ np.linalg.inv(transform_matrix01)
 
     # 使用图片1和图片2进行三角化得到增量点云
-    R12, t12 = rotation_opencv.SE32Rt(transform_matrix12)
+    R12, t12 = my_rotation.SE32Rt(transform_matrix12)
     # 得到的点云以图片1的相机姿态为原点坐标系
     points3d_12_cam1 = triangulation.triangulate(camK, R12, t12, list_kp1_12, list_kp2_12)
 
     # 计算图片1到图片0的位姿
     transform_matrix10 = np.linalg.inv(transform_matrix01)
-    R10, t10 = rotation_opencv.SE32Rt(transform_matrix10)
+    R10, t10 = my_rotation.SE32Rt(transform_matrix10)
     # 将增量点云统一到第0张图片的基准坐标系
     points3d_12_cam0 = (R10 @ points3d_12_cam1.T + t10).T
-    R02, t02 = rotation_opencv.SE32Rt(transform_matrix02)
+    R02, t02 = my_rotation.SE32Rt(transform_matrix02)
     return points3d_12_cam0, R02, t02
 
