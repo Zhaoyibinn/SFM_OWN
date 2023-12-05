@@ -220,7 +220,7 @@ def proc_2_pics(camK, list_kp1, list_kp2):
                 t：平移向量；
                 points3d：三维坐标点 numpy 矩阵（K*3）；
     '''
-    good_F, status = cv2.findFundamentalMat(list_kp1, list_kp2, method=cv2.FM_RANSAC, ransacReprojThreshold=3,
+    good_F, status = cv2.findFundamentalMat(list_kp1, list_kp2, method=cv2.FM_RANSAC, ransacReprojThreshold=1,
                                             confidence=0.99)  # 使用RANSAC方法计算基本矩阵，函数参考
     # https://blog.csdn.net/bb_sy_w/article/details/121082013?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170108654916800215081297%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=170108654916800215081297&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~baidu_landing_v2~default-5-121082013-null-null.142^v96^pc_search_result_base2&utm_term=cv2.findFundamentalMat&spm=1018.2226.3001.4187
     print("该两张图片的基础矩阵F=", end="")

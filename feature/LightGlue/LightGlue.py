@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import cv2
 import time
 import torch
-
+import random
 class lightglue(my_feature_class.feature):
     '''
         LightGlue特征点提取、描述、匹配
@@ -16,7 +16,7 @@ class lightglue(my_feature_class.feature):
     def __init__(self, imgpaths: list, imgnum: int):
         # 调用父类的初始化方法
         self.extractor = SuperPoint(max_num_keypoints=512).eval().cuda()
-        self.matcher = LightGlue(features='superpoint').eval().cuda()
+        self.matcher = LightGlue(features='superpoint').eval().cuda()#可选特征提取方法有superpoint,disk,sift
         super().__init__(imgpaths, imgnum)
 
 
@@ -174,16 +174,15 @@ class lightglue(my_feature_class.feature):
         allpic[:, 0:img0.shape[1]] = img0
         allpic[:, img0.shape[1]:newWidth] = img1
         for i in range(len(points0)):
-            allpic = cv2.circle(allpic, (points0[i][0], points0[i][1]), 3, (255, 0, 0), -1)
+            a = random.randint(0, 255)
+            b = random.randint(0, 255)
+            c = random.randint(0, 255)
+            allpic = cv2.circle(allpic, (points0[i][0], points0[i][1]), 3, (a, b, c), -1)
             allpic = cv2.circle(allpic, (points1[i][0] + img0.shape[1], points1[i][1]), 3,
-                                (255, 0, 0), -1)
-        # plt.imshow(allpic)
-        # plt.show()
-
-        for i in range(len(points0)):
+                                (a, b, c), -1)
             allpic = cv2.line(allpic, (points0[i][0], points0[i][1]),
                               (points1[i][0] + img0.shape[1], points1[i][1]),
-                              (255, 0, 0), 1)
+                              (a, b, c), 1)
         plt.imshow(allpic)
         plt.show()
         return 0

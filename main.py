@@ -13,7 +13,7 @@ def main(imgpaths,camK,imgnum):
     R01, t01, points3d01 = SFM.proc_2_pics(camK, list_kp0, list_kp1)
     co_feature_idx, co_feature01_pic0_xy, co_feature01_pic1_xy, co_feature12_pic2_xy = LightGlue_extraction.get_co_feature(0,
                                                                                                                       1,
-                                                                                                                      2,True)
+                                                                                                                      2)
     # create_co_see_pic(list_kp_1s, list_kp_2s, matchidxs,imgnum)
     # 从0号，1号图片重建得到的点云中，按索引挑选出共视特征点的点云
     co_points3d_01_cam0 = points3d01[co_feature_idx, :]
@@ -34,7 +34,7 @@ def main(imgpaths,camK,imgnum):
 
     pcd01 = o3d.geometry.PointCloud()
     pcd01.points = o3d.utility.Vector3dVector(points3d01)
-    pcd01.paint_uniform_color([0, 0, 1])
+    pcd01.paint_uniform_color([0, 0, 0])
 
     pcd12 = o3d.geometry.PointCloud()  # 展示三维点
     pcd12.points = o3d.utility.Vector3dVector(points3d_12_cam0)
