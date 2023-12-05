@@ -15,7 +15,7 @@ class lightglue(my_feature_class.feature):
     '''
     def __init__(self, imgpaths: list, imgnum: int):
         # 调用父类的初始化方法
-        self.extractor = SuperPoint(max_num_keypoints=512).eval().cuda()
+        self.extractor = SuperPoint(max_num_keypoints=1024).eval().cuda()
         self.matcher = LightGlue(features='superpoint').eval().cuda()#可选特征提取方法有superpoint,disk,sift
         super().__init__(imgpaths, imgnum)
 
@@ -50,7 +50,7 @@ class lightglue(my_feature_class.feature):
         points0 = self.list_kp_1s_[idx_pic1][idx_pic2-idx_pic1-1]
         points1 = self.list_kp_2s_[idx_pic1][idx_pic2-idx_pic1-1]
 
-        # self.match_visual(img0, img1, points0, points1)
+        # self._match_visual(img0, img1, points0, points1)
 
         list_kp_1s = np.array(points0)
         list_kp_2s = np.array(points1)
@@ -167,7 +167,7 @@ class lightglue(my_feature_class.feature):
             raise ValueError("输入必须增序排列")
         return co_idx_12, co_feature12_pic1_xy, co_feature12_pic2_xy, co_feature23_pic3_xy
 
-    def match_visual(self,img0, img1, points0, points1):
+    def _match_visual(self,img0, img1, points0, points1):
         newWidth = img0.shape[1] + img1.shape[1]
         newHeight = img0.shape[0]
         allpic = np.zeros((newHeight, newWidth, 3), np.uint8)
@@ -177,8 +177,8 @@ class lightglue(my_feature_class.feature):
             a = random.randint(0, 255)
             b = random.randint(0, 255)
             c = random.randint(0, 255)
-            allpic = cv2.circle(allpic, (points0[i][0], points0[i][1]), 3, (a, b, c), -1)
-            allpic = cv2.circle(allpic, (points1[i][0] + img0.shape[1], points1[i][1]), 3,
+            allpic = cv2.circle(allpic, (points0[i][0], points0[i][1]), 6, (a, b, c), -1)
+            allpic = cv2.circle(allpic, (points1[i][0] + img0.shape[1], points1[i][1]), 6,
                                 (a, b, c), -1)
             allpic = cv2.line(allpic, (points0[i][0], points0[i][1]),
                               (points1[i][0] + img0.shape[1], points1[i][1]),

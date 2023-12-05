@@ -17,7 +17,7 @@ class sfm_cv2:
     def reconstruct_allpics(self):
         img_idx_list = range(self.feature_extractor_.imgnum_)
         list_kp0, list_kp1, _ = self.feature_extractor_.get_feature(0, 1)
-        R01, t01, points3d_01 = self.__proc_2_pics(self.camK_, list_kp0, list_kp1)
+        R01, t01, points3d_01 = proc_2_pics(self.camK_, list_kp0, list_kp1)
         g_base_to_Mid = my_rotation.Rt2SE3(R01, t01)
         points3d_old_iter = points3d_01
         points3d_camBase_list = []
@@ -220,12 +220,13 @@ def proc_2_pics(camK, list_kp1, list_kp2):
                 t：平移向量；
                 points3d：三维坐标点 numpy 矩阵（K*3）；
     '''
-    good_F, status = cv2.findFundamentalMat(list_kp1, list_kp2, method=cv2.FM_RANSAC, ransacReprojThreshold=1,
-                                            confidence=0.99)  # 使用RANSAC方法计算基本矩阵，函数参考
-    # https://blog.csdn.net/bb_sy_w/article/details/121082013?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170108654916800215081297%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=170108654916800215081297&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~baidu_landing_v2~default-5-121082013-null-null.142^v96^pc_search_result_base2&utm_term=cv2.findFundamentalMat&spm=1018.2226.3001.4187
-    print("该两张图片的基础矩阵F=", end="")
-    print(good_F)
-    E = np.dot(np.dot(np.transpose(camK), good_F), camK)  # 计算本质矩阵，就是(K.T)*F*K
+    # good_F, status = cv2.findFundamentalMat(list_kp1, list_kp2, method=cv2.FM_RANSAC, ransacReprojThreshold=1,
+    #                                         confidence=0.99)  # 使用RANSAC方法计算基本矩阵，函数参考
+    # # https://blog.csdn.net/bb_sy_w/article/details/121082013?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170108654916800215081297%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=170108654916800215081297&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~baidu_landing_v2~default-5-121082013-null-null.142^v96^pc_search_result_base2&utm_term=cv2.findFundamentalMat&spm=1018.2226.3001.4187
+    # print("该两张图片的基础矩阵F=", end="")
+    # print(good_F)
+    # E = np.dot(np.dot(np.transpose(camK), good_F), camK)  # 计算本质矩阵，就是(K.T)*F*K
+    E ,status= cv2.findEssentialMat(list_kp1, list_kp2,camK, method=cv2.FM_RANSAC, threshold=1,prob=0.99)
     print("该两张图片的本质矩阵E=", end="")
     print(E)
     retval, R, t, mask = cv2.recoverPose(E, list_kp1, list_kp2, camK)  # 计算得到R，t
