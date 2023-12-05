@@ -128,12 +128,13 @@ class SURF_cv2(my_feature_class.feature):
             co_feature12_pic1_xy = list_kp1_12[co_idx_12]
             co_feature12_pic2_xy = list_kp2_12[co_idx_12]
             co_feature23_pic3_xy = list_kp3_23[co_idx_23]
-            # 三张图片共视点可视化
-            # 这里二维可视化和三维可视化好像会冲突，建议只看一个，两个都要看就只能看一次，再次进这个函数就会报错（不知道为什么）
-            img1 = cv2.imread(self.imgpaths_[idx_pic1])  # 二维可视化
-            img2 = cv2.imread(self.imgpaths_[idx_pic2])
-            img3 = cv2.imread(self.imgpaths_[idx_pic3])
+
             if Visual:
+                # 三张图片共视点可视化
+                # 这里二维可视化和三维可视化好像会冲突，建议只看一个，两个都要看就只能看一次，再次进这个函数就会报错（不知道为什么）
+                img1 = cv2.imread(self.imgpaths_[idx_pic1])  # 二维可视化
+                img2 = cv2.imread(self.imgpaths_[idx_pic2])
+                img3 = cv2.imread(self.imgpaths_[idx_pic3])
                 self.__look_3_co_pic(img1, img2, img3, co_feature12_pic1_xy, co_feature12_pic2_xy, co_feature23_pic3_xy, idx_mat.shape[1])
         else:
             raise ValueError("输入必须增序排列")

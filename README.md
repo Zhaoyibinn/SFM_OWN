@@ -5,7 +5,7 @@
 *Lab10204 - 3DV Group*
 
 ## 效果
-![图片](result_pics/img.png)
+![](DATA/dtu/scan10/images/00000000.jpg)
 ![](result_pics/test0123.gif)
 ## 环境：
 python 3.6  
