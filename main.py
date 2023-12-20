@@ -13,9 +13,11 @@ def main(imgpaths,camK,imgnum):
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pcd_np)
-    MinPts = 30  # 邻域球内的最少点个数，小于该个数为噪声点
-    r = 0.2
-    pcd, idx = pcd.remove_radius_outlier(MinPts, r)
+
+    # MinPts = 30  # 邻域球内的最少点个数，小于该个数为噪声点
+    # r = 0.2
+    # pcd, idx = pcd.remove_radius_outlier(MinPts, r)
+
     o3d.visualization.draw_geometries([pcd])
     return 0
 
@@ -27,7 +29,8 @@ if __name__=="__main__":
     # imgnum=4
     # imgpaths = [img1,img2,img3,img4]
 
-    Dir_path = "./DATA/dtu/scan10/images/"
+    # Dir_path = "./DATA/dtu/scan10/images/"
+    Dir_path = "/media/zhaoyibin/3DRE/LGDATA/Satellite/data/color/"
     imgpaths = os.listdir(Dir_path)
     imgpaths.sort()
     imgnum = len(imgpaths)
@@ -36,7 +39,10 @@ if __name__=="__main__":
 
     part_imgpaths = imgpaths
     part_imgnum =len(part_imgpaths)
-    camK = np.array([[2892.33, 0.0, 823.206],
-                     [0.0, 2883.18, 619.07],
+    # camK = np.array([[2892.33, 0.0, 823.206],
+    #                  [0.0, 2883.18, 619.07],
+    #                  [0.0, 0.0, 1.0]])
+    camK = np.array([[613.463, 0.0, 637.666],
+                     [0.0, 613.379, 368.012],
                      [0.0, 0.0, 1.0]])
     main(part_imgpaths,camK,part_imgnum)

@@ -15,7 +15,7 @@ class lightglue(my_feature_class.feature):
     '''
     def __init__(self, imgpaths: list, imgnum: int):
         # 调用父类的初始化方法
-        self.extractor = SuperPoint(max_num_keypoints=1024).eval().cuda()
+        self.extractor = SuperPoint(max_num_keypoints=512).eval().cuda()
         self.matcher = LightGlue(features='superpoint').eval().cuda()#可选特征提取方法有superpoint,disk,sift
         super().__init__(imgpaths, imgnum)
 

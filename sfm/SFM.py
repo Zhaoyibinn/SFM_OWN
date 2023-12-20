@@ -48,7 +48,7 @@ class sfm_cv2:
         '''
         if idx_pic1 < idx_pic2 and idx_pic2 < idx_pic3:
             # 增加2号图片，提取其与0号，1号图片的共视特征
-            co_feature_idx, co_feature01_pic0_xy, co_feature01_pic1_xy, co_feature12_pic2_xy = self.feature_extractor_.get_co_feature(idx_pic1, idx_pic2, idx_pic3)
+            co_feature_idx, co_feature01_pic0_xy, co_feature01_pic1_xy, co_feature12_pic2_xy = self.feature_extractor_.get_co_feature(idx_pic1, idx_pic2, idx_pic3,True)
             # 从0号，1号图片重建得到的点云中，按索引挑选出共视特征点的点云
             co_points3d_01_cam0 = points3d_12_camBase[co_feature_idx, :]
             # 增量式构建2号图片与1号图片进行三角化的点云
